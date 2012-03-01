@@ -23,13 +23,25 @@ class DatastoreClient:
 
     def _upload(self, dict_iterator):
         start = time.time()
-        _headers = {}
+        url = self.url + '/_bulk'
+
+        def send_request(data):
+            post_data = "%s%s" % ("\n".join(data), "\n")
+            req = urllib2.Request(url, post_data, self._headers)
+            return urllib2.urlopen(req)
+
+        data = []
         for count,dict_ in enumerate(dict_iterator):
-            data = json.dumps(dict_)
-            req = urllib2.Request(self.url, data, self._headers)
-            response = urllib2.urlopen(req)
-            if (count % 10) == 0:
+            data.append(json.dumps({"index": {"_id": count+1}}))
+            data.append(json.dumps(dict_))
+            if (count % 100) == 0:
+                response = send_request(data)
+                data[:] = []
                 print count, (time.time() - start), response.read()
+        if data:
+            send_request(data)
+            print count, (time.time() - start), response.read()
+
 
     def upload(self, filepath_or_fileobj, filetype=None):
         '''Upload data to webstore table. Additional required arguments is file path
