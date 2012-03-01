@@ -37,10 +37,10 @@ class DatastoreClient:
             if (count % 100) == 0:
                 response = send_request(data)
                 data[:] = []
-                print count, (time.time() - start), response.read()
+                print count, (time.time() - start)#, response.read()
         if data:
             send_request(data)
-            print count, (time.time() - start), response.read()
+            print count, (time.time() - start)#, response.read()
 
 
     def upload(self, filepath_or_fileobj, filetype=None):
