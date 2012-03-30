@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+'''Exemplar command line client for the CKAN Datastore (written in Python).
+
+For usage do::
+
+    ./ckan-datastore.py -h
+
+Note that CKAN DataStore is, in essence, ElasticSearch so you can use any
+ElasticSearch client (http://www.elasticsearch.org/guide/appendix/clients.html)
+to interact with it.
+'''
 import urlparse
 import mimetypes
 import os
@@ -37,10 +47,12 @@ class DatastoreClient:
             if (count % 100) == 0:
                 response = send_request(data)
                 data[:] = []
-                print count, (time.time() - start)#, response.read()
+                print (count, (time.time() - start))
+                # print (count, (time.time() - start), response.read())
         if data:
             send_request(data)
-            print count, (time.time() - start)#, response.read()
+            print (count, (time.time() - start))
+            # print (count, (time.time() - start), response.read())
 
 
     def upload(self, filepath_or_fileobj, filetype=None):
