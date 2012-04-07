@@ -18,7 +18,7 @@ import json
 import csv
 import time
 
-class DatastoreClient:
+class DataStoreClient:
     def __init__(self, url):
         self.parsed = urlparse.urlparse(url)
         newparsed = list(self.parsed)
@@ -57,6 +57,8 @@ class DatastoreClient:
             print (count, (time.time() - start))
             # print (count, (time.time() - start), response.read())
 
+    def writerow(self, row, **kwargs):
+        self._upload([row])
 
     def upload(self, filepath_or_fileobj, filetype=None):
         '''Upload data to webstore table. Additional required arguments is file path
