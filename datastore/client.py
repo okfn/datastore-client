@@ -42,7 +42,10 @@ class DatastoreClient:
 
         data = []
         for count,dict_ in enumerate(dict_iterator):
-            data.append(json.dumps({"index": {"_id": count+1}}))
+            # data.append(json.dumps({"index": {"_id": count+1}}))
+            bulkmeta = {"index": {}}
+            if 'id' in dict_: bulkmeta['_id'] = dict_['id']
+            data.append(json.dumps(bulkmeta))
             data.append(json.dumps(dict_))
             if (count % 100) == 0:
                 response = send_request(data)
