@@ -29,6 +29,8 @@ class DataStoreClient:
             self.netloc = self.parsed.netloc.split('@')[1]
             newparsed[1] = self.netloc
         self.url = urlparse.urlunparse(newparsed)
+        # elastic search type name
+        self.es_type_name = self.parsed.path.split('/')[-1] 
         self._setup_authorization(username)
 
     def _upload(self, dict_iterator):
@@ -77,12 +79,38 @@ class DataStoreClient:
             print 'Unsupported format: %s' % filetype
 
     def delete(self):
-        '''Delete this webstore table.'''
+        '''Delete this DataStore table.'''
         opener = urllib2.build_opener(urllib2.HTTPHandler)
         request = urllib2.Request(self.url)
         if self.authorization:
             request.add_header('Authorization', self.authorization)
         request.get_method = lambda: 'DELETE'
+        response = opener.open(request)
+        return response.read()
+
+    def mapping(self):
+        '''Get the mapping for this DataStore table.'''
+
+    def mapping_update(self, mapping):
+        '''Update the mapping for this DataStore table.
+        
+        @param mapping: mapping dict for this type as per
+        http://www.elasticsearch.org/guide/reference/api/admin-indices-put-mapping.html
+
+        Note that you need not (and should not) include the type name, i.e. we
+        will PUT to mapping API:
+
+        {type-name}: {mapping}
+        '''
+        url = self.url + '/_mapping'
+        data = json.dumps({self.es_type_name: mapping})
+        return self._request(url, data, 'PUT')
+        
+    def _request(self, url, data, method):
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        request = urllib2.Request(self.url, data, self._headers)
+        request.get_method = lambda: method
+        print url, data, method
         response = opener.open(request)
         return response.read()
 
@@ -115,13 +143,14 @@ class DataStoreClient:
 class TestItOut:
     def test_url_parse(self):
         url = 'http://abc@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
-        client = DatastoreClient(url)
+        client = DataStoreClient(url)
         assert client.netloc == 'localhost:8088'
         assert client.authorization == 'abc'
+        assert client.es_type_name == '75328a3a-e566-4993-9115-6e915ed7362c' 
 
     def test_delete(self):
         url = 'http://tester@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
-        client = DatastoreClient(url)
+        client = DataStoreClient(url)
         out = client.delete()
         data = json.loads(out)
         assert data['ok'] == True, data
@@ -130,7 +159,7 @@ class TestItOut:
         url = 'http://tester@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
         from StringIO import StringIO
         data = StringIO("""[{"a": 1, "b": 2, "c": 3}]""")
-        client = DatastoreClient(url)
+        client = DataStoreClient(url)
         client.upload(data, filetype='json')
 
 
@@ -178,4 +207,4 @@ Actions:
         _methods[method](*args[1:], **optdict)
 
 if __name__ == '__main__':
-    _main(DatastoreClient)
+    _main(DataStoreClient)
