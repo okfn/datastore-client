@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-'''Exemplar command line client for the CKAN Datastore (written in Python).
+'''Library and command line client for the CKAN Datastore (written in Python).
 
-For usage do::
+For command line usage do::
 
-    ./ckan-datastore.py -h
+    ./datastore/client.py -h
 
 Note that CKAN DataStore is, in essence, ElasticSearch so you can use any
 ElasticSearch client (http://www.elasticsearch.org/guide/appendix/clients.html)
@@ -33,7 +33,8 @@ class DataStoreClient:
         self.es_type_name = self.parsed.path.split('/')[-1] 
         self._setup_authorization(username)
 
-    def _upload(self, dict_iterator):
+    def upsert(self, dict_iterator):
+        '''Insert / update documents provided in dict_iterator.'''
         start = time.time()
         url = self.url + '/_bulk'
 
@@ -59,9 +60,6 @@ class DataStoreClient:
             print (count, (time.time() - start))
             # print (count, (time.time() - start), response.read())
 
-    def writerow(self, row, **kwargs):
-        self._upload([row])
-
     def upload(self, filepath_or_fileobj, filetype=None):
         '''Upload data to webstore table. Additional required arguments is file path
         with data to upload and optional {filetype} giving type of file.
@@ -72,9 +70,9 @@ class DataStoreClient:
                 filetype = mimetypes.guess_type(filepath_or_fileobj)[0]
             fileobj = open(filepath_or_fileobj)
         if filetype.endswith('csv'):
-            self._upload(csv.DictReader(fileobj))
+            self.upsert(csv.DictReader(fileobj))
         elif filetype.endswith('json'):
-            self._upload(json.load(fileobj))
+            self.upsert(json.load(fileobj))
         else: 
             print 'Unsupported format: %s' % filetype
 
