@@ -17,6 +17,10 @@ import urllib2
 import json
 import csv
 import time
+import logging
+
+logger = logging.getLogger('datastore.client')
+
 
 class DataStoreClient:
     def __init__(self, url):
@@ -54,12 +58,10 @@ class DataStoreClient:
             if (count % 100) == 0:
                 response = send_request(data)
                 data[:] = []
-                print (count, (time.time() - start))
-                # print (count, (time.time() - start), response.read())
+                logger.debug('%s %s' % (count, (time.time() - start)))
         if data:
             send_request(data)
-            print (count, (time.time() - start))
-            # print (count, (time.time() - start), response.read())
+            logger.debug('%s %s' % (count, (time.time() - start)))
 
     def upload(self, filepath_or_fileobj, filetype=None):
         '''Upload data to webstore table. Additional required arguments is file path
@@ -75,7 +77,7 @@ class DataStoreClient:
         elif filetype.endswith('json'):
             self.upsert(json.load(fileobj))
         else: 
-            print 'Unsupported format: %s' % filetype
+            raise ValueError('Unsupported format: %s' % filetype)
 
     def delete(self):
         '''Delete this DataStore table.'''
@@ -111,8 +113,9 @@ class DataStoreClient:
         try:
             out = self._request(url, data, 'PUT')
         except Exception, inst:
-            # logger.error(inst.url, inst.read())
+            logger.error('%s: %s' % (inst.url, inst.read()))
             raise
+        logger.debug('%s: %s' % (url, out))
         return out
         
     def _request(self, url, data, method):
@@ -234,4 +237,6 @@ Actions:
         _methods[method](*args[1:], **optdict)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     _main(DataStoreClient)
+
