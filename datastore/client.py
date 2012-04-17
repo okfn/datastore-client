@@ -38,6 +38,13 @@ class DataStoreClient:
         self.es_type_name = self.parsed.path.split('/')[-1] 
         self._setup_authorization(username)
 
+    def query(self, query):
+        url = self.url + '/_search'
+        q = json.dumps(query)
+        req = urllib2.Request(url, q, self._headers)
+        out = urllib2.urlopen(req).read()
+        return json.loads(out)
+
     def upsert(self, dict_iterator):
         '''Insert / update documents provided in dict_iterator.'''
         start = time.time()
@@ -174,6 +181,23 @@ class TestItOut:
         data = StringIO("""[{"a": 1, "b": 2, "c": 3}]""")
         client = DataStoreClient(url)
         client.upload(data, filetype='json')
+
+    def test_query(self):
+        url = self.base_url + '/update-test'
+        data = [
+            {"a": 1, "b": 2, "c": "UK"},
+            {"a": 2, "b": 5, "c": "UK"},
+            {"a": 2, "b": 5, "c": "DE"}
+        ]
+        client = DataStoreClient(url)
+        client.upsert(data)
+        query = {
+            'query': { 
+                'match_all': {}
+            }
+        }
+        out = client.query(query)
+        assert out['hits']['total']
 
     def test_mapping(self):
         url = self.base_url + '/mapping-test'
