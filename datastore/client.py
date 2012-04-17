@@ -20,6 +20,7 @@ import time
 
 class DataStoreClient:
     def __init__(self, url):
+        url = url.rstrip('/')
         self.parsed = urlparse.urlparse(url)
         newparsed = list(self.parsed)
         username = self.parsed.username
@@ -88,6 +89,11 @@ class DataStoreClient:
 
     def mapping(self):
         '''Get the mapping for this DataStore table.'''
+        url = self.url + '/_mapping'
+        req = urllib2.Request(url, None, self._headers)
+        data = urllib2.urlopen(req).read()
+        data = json.loads(data)
+        return data
 
     def mapping_update(self, mapping):
         '''Update the mapping for this DataStore table.
@@ -102,13 +108,17 @@ class DataStoreClient:
         '''
         url = self.url + '/_mapping'
         data = json.dumps({self.es_type_name: mapping})
-        return self._request(url, data, 'PUT')
+        try:
+            out = self._request(url, data, 'PUT')
+        except Exception, inst:
+            # logger.error(inst.url, inst.read())
+            raise
+        return out
         
     def _request(self, url, data, method):
         opener = urllib2.build_opener(urllib2.HTTPHandler)
-        request = urllib2.Request(self.url, data, self._headers)
+        request = urllib2.Request(url, data, self._headers)
         request.get_method = lambda: method
-        print url, data, method
         response = opener.open(request)
         return response.read()
 
@@ -139,6 +149,8 @@ class DataStoreClient:
                 return api_key
 
 class TestItOut:
+    base_url = 'http://localhost:9200/datastore-client-test'
+
     def test_url_parse(self):
         url = 'http://abc@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
         client = DataStoreClient(url)
@@ -147,18 +159,35 @@ class TestItOut:
         assert client.es_type_name == '75328a3a-e566-4993-9115-6e915ed7362c' 
 
     def test_delete(self):
-        url = 'http://tester@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
+        url = self.base_url + '/delete-test'
         client = DataStoreClient(url)
         out = client.delete()
         data = json.loads(out)
         assert data['ok'] == True, data
 
     def test_upload(self):
-        url = 'http://tester@localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c'
+        url = self.base_url + '/update-test'
         from StringIO import StringIO
         data = StringIO("""[{"a": 1, "b": 2, "c": 3}]""")
         client = DataStoreClient(url)
         client.upload(data, filetype='json')
+
+    def test_mapping(self):
+        url = self.base_url + '/mapping-test'
+        client = DataStoreClient(url)
+        client.delete()
+        mapping = {
+            'properties': {
+                'url': {
+                    'type': 'string'
+                }
+            }
+        }
+        client.mapping_update(mapping)
+        out = client.mapping()
+        url = out['mapping-test']['properties']['url']
+        assert url
+        assert url['type'] == 'string', url
 
 
 ## ======================================
