@@ -39,6 +39,11 @@ class DataStoreClient:
         self._setup_authorization(username)
 
     def query(self, query):
+        '''Perform a query on ElasticSearch endpoint.
+        
+        :param query: a dictionary specifying the elasticsearch query as per
+        elastic search spec.
+        '''
         url = self.url + '/_search'
         q = json.dumps(query)
         req = urllib2.Request(url, q, self._headers)
