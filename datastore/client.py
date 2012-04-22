@@ -47,7 +47,11 @@ class DataStoreClient:
         url = self.url + '/_search'
         q = json.dumps(query)
         req = urllib2.Request(url, q, self._headers)
-        out = urllib2.urlopen(req).read()
+        try:
+            out = urllib2.urlopen(req).read()
+        except Exception, inst:
+            logger.error('%s: %s' % (inst.url, inst.read()))
+            raise
         return json.loads(out)
 
     def upsert(self, dict_iterator, refresh=False):
@@ -189,22 +193,113 @@ class TestItOut:
         client = DataStoreClient(url)
         client.upload(data, filetype='json')
 
-    def test_query(self):
-        url = self.base_url + '/update-test'
-        data = [
-            {"a": 1, "b": 2, "c": "UK"},
-            {"a": 2, "b": 5, "c": "UK"},
-            {"a": 2, "b": 5, "c": "DE"}
+    query_data = [
+            {"a": 'john', "b": 2, "c": "UK"},
+            {"a": 'jane', "b": 5, "c": "UK"},
+            {"a": 'john', "b": 7, "c": "DE"}
         ]
+
+    def test_query(self):
+        url = self.base_url + '/query-test'
         client = DataStoreClient(url)
-        client.upsert(data)
+        client.delete()
+        client.upsert(self.query_data, refresh=True)
         query = {
             'query': { 
                 'match_all': {}
             }
         }
         out = client.query(query)
-        assert out['hits']['total']
+        import pprint
+        assert out['hits']['total'] == 3, pprint.pprint(out)
+
+        query = {
+            'query': {
+                'constant_score': { 
+                    'filter': {
+                        'term': {
+                            # must be lower-case!
+                            'c': 'uk'
+                        }
+                    }
+                }
+            }
+        }
+        out = client.query(query)
+        assert out['hits']['total'] == 2, pprint.pprint(out)
+
+        query = {
+            'query': {
+                "constant_score" : {
+                    "filter" : {
+                        "range" : {
+                            "b" : { 
+                                "from" : 4, 
+                                "to" : "8"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        out = client.query(query)
+        assert out['hits']['total'] == 2, pprint.pprint(out)
+
+        query = {
+            'query': {
+                "range" : {
+                    "b" : { 
+                        "from" : 4, 
+                        "to" : "8"
+                    }
+                }
+            }
+        }
+        out = client.query(query)
+        assert out['hits']['total'] == 2, pprint.pprint(out)
+
+        query = {
+            "query": {
+                "filtered": {
+                    "query": {
+                        "match_all": {}
+                    },
+                    "filter": {
+                        "and": [
+                            {
+                                "range" : {
+                                    "b" : { 
+                                        "from" : 4, 
+                                        "to" : "8"
+                                    }
+                                },
+                            },
+                            {
+                                "term": {
+                                    "a": "john"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+        out = client.query(query)
+        assert out['hits']['total'] == 1, pprint.pprint(out)
+
+    def test_query_facet(self):
+        url = self.base_url + '/query-test'
+        client = DataStoreClient(url)
+        client.delete()
+        client.upsert(self.query_data, refresh=True)
+        query = {
+            'query': { 
+                'match_all': {}
+            }
+        }
+        out = client.query(query)
+        import pprint
+        assert out['hits']['total'] == 3, pprint.pprint(out)
 
     def test_mapping(self):
         url = self.base_url + '/mapping-test'
