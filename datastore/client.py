@@ -50,10 +50,12 @@ class DataStoreClient:
         out = urllib2.urlopen(req).read()
         return json.loads(out)
 
-    def upsert(self, dict_iterator):
+    def upsert(self, dict_iterator, refresh=False):
         '''Insert / update documents provided in dict_iterator.'''
         start = time.time()
         url = self.url + '/_bulk'
+        if refresh:
+            url += '?refresh=true'
 
         def send_request(data):
             post_data = "%s%s" % ("\n".join(data), "\n")
