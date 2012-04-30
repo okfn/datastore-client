@@ -33,6 +33,8 @@ class DataStoreClient:
             # get rid of username:password@ in netloc
             self.netloc = self.parsed.netloc.split('@')[1]
             newparsed[1] = self.netloc
+        if self.parsed.path.startswith('/dataset'):
+            newparsed[2] = '/api/data/%s' % self.parsed.path.rstrip('/').split('/')[-1]
         self.url = urlparse.urlunparse(newparsed)
         # elastic search type name
         self.es_type_name = self.parsed.path.split('/')[-1] 
@@ -81,7 +83,7 @@ class DataStoreClient:
             send_request(data)
             logger.debug('%s %s' % (count, (time.time() - start)))
 
-    def upload(self, filepath_or_fileobj, filetype=None):
+    def upload(self, filepath_or_fileobj, filetype=None, **kwargs):
         '''Upload data to webstore table. Additional required arguments is file path
         with data to upload and optional {filetype} giving type of file.
         '''
@@ -104,8 +106,11 @@ class DataStoreClient:
         if self.authorization:
             request.add_header('Authorization', self.authorization)
         request.get_method = lambda: 'DELETE'
+        logger.debug('DELETE: %s' % self.url)
         response = opener.open(request)
-        return response.read()
+        out = response.read()
+        logger.debug('DELETE: %s' % out)
+        return out
 
     def mapping(self):
         '''Get the mapping for this DataStore table.'''
@@ -177,6 +182,13 @@ class TestItOut:
         client = DataStoreClient(url)
         assert client.netloc == 'localhost:8088'
         assert client.authorization == 'abc'
+        assert client.es_type_name == '75328a3a-e566-4993-9115-6e915ed7362c' 
+
+        url = 'http://abc@localhost:8088/dataset/xyz/resource/75328a3a-e566-4993-9115-6e915ed7362c'
+        client = DataStoreClient(url)
+        assert client.netloc == 'localhost:8088'
+        assert client.authorization == 'abc'
+        assert client.url == 'http://localhost:8088/api/data/75328a3a-e566-4993-9115-6e915ed7362c' 
         assert client.es_type_name == '75328a3a-e566-4993-9115-6e915ed7362c' 
 
     def test_delete(self):
