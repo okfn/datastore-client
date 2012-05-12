@@ -9,6 +9,8 @@ Note that CKAN DataStore is, in essence, ElasticSearch so you can use any
 ElasticSearch client (http://www.elasticsearch.org/guide/appendix/clients.html)
 to interact with it.
 '''
+import os
+os.environ['http_proxy'] = ''
 import urlparse
 import mimetypes
 import os
@@ -70,7 +72,6 @@ class DataStoreClient:
 
         data = []
         for count,dict_ in enumerate(dict_iterator):
-            # data.append(json.dumps({"index": {"_id": count+1}}))
             bulkmeta = {"index": {}}
             if 'id' in dict_: bulkmeta['_id'] = dict_['id']
             data.append(json.dumps(bulkmeta))
@@ -101,14 +102,8 @@ class DataStoreClient:
 
     def delete(self):
         '''Delete this DataStore table.'''
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
-        request = urllib2.Request(self.url)
-        if self.authorization:
-            request.add_header('Authorization', self.authorization)
-        request.get_method = lambda: 'DELETE'
         logger.debug('DELETE: %s' % self.url)
-        response = opener.open(request)
-        out = response.read()
+        out = self._request(self.url, None, 'DELETE')
         logger.debug('DELETE: %s' % out)
         return out
 
