@@ -73,7 +73,7 @@ class DataStoreClient:
         data = []
         for count,dict_ in enumerate(dict_iterator):
             bulkmeta = {"index": {}}
-            if 'id' in dict_: bulkmeta['_id'] = dict_['id']
+            if 'id' in dict_: bulkmeta['index']['_id'] = dict_['id']
             data.append(json.dumps(bulkmeta))
             data.append(json.dumps(dict_))
             if (count % 100) == 0:
